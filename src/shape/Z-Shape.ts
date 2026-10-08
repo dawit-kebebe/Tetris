@@ -1,3 +1,4 @@
+import Tetris from "../Tetris";
 import { Square, ISquare, Shape } from "./Square";
 
 class ZShape extends Shape {
@@ -17,6 +18,31 @@ class ZShape extends Shape {
     }
 
     draw() {
+        if (this.square1)
+            this.square1.draw();
+
+        if (this.square2)
+            this.square2.draw();
+
+        if (this.square3)
+            this.square3.draw();
+
+        if (this.square4)
+            this.square4.draw();
+
+    }
+
+    getSquares(): Square[] {
+        if (this.square1 && this.square2 && this.square3 && this.square4)
+            return Array.from([this.square1, this.square2, this.square3, this.square4])
+        return []
+    }
+
+    rotate(pos: number) { this.rotation = pos }
+
+    setSquare(square: ISquare) {
+        this.square = square
+
         let square1Dim = {} as ISquare;
         let square2Dim = {} as ISquare;
         let square3Dim = {} as ISquare;
@@ -56,17 +82,15 @@ class ZShape extends Shape {
 
         }
 
+        if (Tetris._DEBUG) {
+            square1Dim.fillColor = "#ff00ff";
+        }
+
         this.square1 = new Square(this.ctx, square1Dim);
-        this.square1.draw();
-
         this.square2 = new Square(this.ctx, square2Dim);
-        this.square2.draw();
-
         this.square3 = new Square(this.ctx, square3Dim);
-        this.square3.draw();
-
         this.square4 = new Square(this.ctx, square4Dim);
-        this.square4.draw();
+
 
         this.setBottom(Math.max(
             this.square1.getBottom(),
@@ -89,24 +113,13 @@ class ZShape extends Shape {
             this.square4.getLeft()
         ))
 
-         this.setRight(Math.max(
+        this.setRight(Math.max(
             this.square1.getRight(),
             this.square2.getRight(),
             this.square3.getRight(),
             this.square4.getRight()
         ))
-
     }
-
-    getSquares(): Square[] {
-        if (this.square1 && this.square2 && this.square3 && this.square4)
-            return Array.from([this.square1, this.square2, this.square3, this.square4])
-        return []
-    }
-
-    rotate(pos: number) { this.rotation = pos }
-
-    setSquare(square: ISquare) { this.square = square }
 }
 
 export default ZShape;

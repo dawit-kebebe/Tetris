@@ -6,9 +6,10 @@ import SShape from "./shape/S-Shape";
 import TShape from "./shape/T-Shape";
 import ZShape from "./shape/Z-Shape";
 import { ISquare, Shape, Square } from "./shape/Square";
+import Tetris from "./Tetris";
 
 export class StateMachine {
-    
+
     archivedSquares: Square[] = []
     canv: HTMLCanvasElement;
     ctx: CanvasRenderingContext2D;
@@ -27,7 +28,7 @@ export class StateMachine {
         this.ctx = ctx;
     }
 
-    checkCollision(shape: Shape): Boolean {
+    checkCollisionBottom(shape: Shape): Boolean {
         const squares = shape.getSquares();
         let isCollided = false;
 
@@ -41,11 +42,50 @@ export class StateMachine {
         return isCollided;
     }
 
-    checkEOL(shape: Shape): Boolean {
+    checkEOLBottom(shape: Shape): Boolean {
         return shape.getBottom() == this.canv.height;
     }
 
+    checkCollisionRight(shape: Shape): Boolean {
+        const squares = shape.getSquares();
+        let isCollided = false;
+
+        for (let i = 0; i < squares.length && !isCollided; i++) {
+            isCollided = this.archivedSquares.some(archivedSquare =>
+                archivedSquare.getRow() === squares[i].getRow() &&
+                archivedSquare.getColumn() === squares[i].getColumn() + 1
+            )
+        }
+
+        return isCollided;
+    }
+
+    checkEOLRight(shape: Shape): Boolean {
+        return shape.getRight() >= this.canv.width;
+    }
+
+    checkCollisionLeft(shape: Shape): Boolean {
+        const squares = shape.getSquares();
+        let isCollided = false;
+
+        for (let i = 0; i < squares.length && !isCollided; i++) {
+            isCollided = this.archivedSquares.some(archivedSquare =>
+                archivedSquare.getRow() === squares[i].getRow() &&
+                archivedSquare.getColumn() === squares[i].getColumn() - 1
+            )
+        }
+
+        return isCollided;
+    }
+
+    checkEOLLeft(shape: Shape): Boolean {
+        return shape.getLeft() <= 0;
+    }
+
     getRandomShape(): Shape {
+        if (Tetris._DEBUG)
+            return new JShape(this.ctx, this.sqr);
+
         const randInt = Math.floor(Math.random() * 7)
 
         switch (randInt) {
