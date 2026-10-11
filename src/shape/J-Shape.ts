@@ -1,10 +1,10 @@
 import Tetris from "../Tetris";
-import { Square, ISquare, Shape } from "./Square";
+import { Square, ISquare, Shape, type Rotation } from "./Square";
 
 class JShape extends Shape {
     square: ISquare
     ctx: CanvasRenderingContext2D
-    rotation: number = 1
+    rotation: Rotation = 1
 
     square1: Square | undefined
     square2: Square | undefined
@@ -37,7 +37,7 @@ class JShape extends Shape {
         return []
     }
 
-    rotate(pos: number) { this.rotation = pos }
+    rotate(pos: Rotation) { this.rotation = pos }
 
     setSquare(square: ISquare) {
         this.square = square

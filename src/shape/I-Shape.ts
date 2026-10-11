@@ -1,11 +1,11 @@
 import Tetris from "../Tetris"
-import { ISquare, Shape, Square } from "./Square"
+import { ISquare, type Rotation, Shape, Square } from "./Square"
 
 class IShape extends Shape {
 
     square: ISquare
     ctx: CanvasRenderingContext2D
-    rotation: number = 1
+    rotation: Rotation = 1
 
     left: number = 0
     right: number = 0
@@ -43,7 +43,7 @@ class IShape extends Shape {
         return []
     }
 
-    rotate(pos: number) { this.rotation = pos }
+    rotate(pos: Rotation) { this.rotation = pos }
 
     setSquare(square: ISquare) {
         this.square = square

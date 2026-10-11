@@ -1,11 +1,12 @@
-import { ISquare, Shape } from "./shape/Square";
-import { StateMachine } from "./StateMachine";
-// import JShape from "./J-Shape";
-// import LShape from "./L-Shape";
-// import OShape from "./O-Shape";
-// import SShape from "./S-Shape";
-// import TShape from "./T-Shape";
-// import ZShape from "./Z-Shape";
+import IShape from "./shape/I-Shape";
+import JShape from "./shape/J-Shape";
+import LShape from "./shape/L-Shape";
+import OShape from "./shape/O-Shape";
+import SShape from "./shape/S-Shape";
+import { ISquare, type Rotation, Shape } from "./shape/Square";
+import TShape from "./shape/T-Shape";
+import ZShape from "./shape/Z-Shape";
+import { State } from "./State";
 
 class Tetris {
     static _DEBUG = true;
@@ -19,12 +20,13 @@ class Tetris {
         fillColor: '#00ff00'
     }
 
-    rotation: number = 1
+    rotation: Rotation = 1
+
     lastTick: number | undefined;
     animationFrameId: number | undefined;
     static DELTA: number = 700;
 
-    stateMachine: StateMachine | undefined;
+    state: State | undefined;
     currentShape: Shape | null | undefined;
 
     constructor(canv: HTMLCanvasElement) {
@@ -40,8 +42,8 @@ class Tetris {
         document.addEventListener('keydown', this.moveLeft.bind(this))
         document.addEventListener('keydown', this.moveRight.bind(this))
 
-        this.stateMachine = new StateMachine(this.canv, this.ctx);
-        this.currentShape = this.stateMachine.getRandomShape();
+        this.state = new State();
+        this.currentShape = this.getRandomShape();
 
         this.lastTick = Date.now();
         this.animationFrameId = requestAnimationFrame(() => {
@@ -54,36 +56,30 @@ class Tetris {
         if (this.lastTick && (Date.now() - this.lastTick >= Tetris.DELTA)) {
             this.lastTick = Date.now();
 
-            this.clearCanvas()
-            this.renderDebugGrid()
-
             if (this.currentShape) {
-
-                if (this.stateMachine?.checkEOLBottom(this.currentShape) || this.stateMachine?.checkCollisionBottom(this.currentShape)) {
-                    const sealSqr = { ... this.sqr };
-                    this.currentShape.setSquare(sealSqr);
-                    this.stateMachine?.archiveShape(this.currentShape);
-                    this.currentShape = this.stateMachine?.getRandomShape();
-                    if (this.currentShape) {
-                        this.sqr = {
-                            dX: 200,
-                            dY: 0,
-                            dSize: 40,
-                            strokeColor: '#ff00ff',
-                            fillColor: '#00ff00'
-                        }
-                        this.rotation = 1;
-                    }
-                } else {
-                    this.sqr.dY += 40;
-                }
-
+                this.sqr.dY += this.sqr.dSize;
                 this.currentShape?.setSquare(this.sqr)
-                this.render()
 
+                if (!this.state?.isValidPosition(this.currentShape)) {
+                    this.sqr.dY -= this.sqr.dSize;
+                    this.currentShape?.setSquare(this.sqr)
+
+                    this.state?.setArrivedShape(this.currentShape);
+                    this.state?.clearCompletedRaw();
+
+                    this.currentShape = this.getRandomShape();
+
+                    this.resetDimention()
+                    this.currentShape.setSquare(this.sqr);
+                }
+                
             }
-
+            
         }
+
+        this.clearCanvas()
+        this.renderDebugGrid()
+        this.render()
 
         this.animationFrameId = requestAnimationFrame(() => this.loop())
     }
@@ -94,12 +90,14 @@ class Tetris {
 
     private moveLeft(event: KeyboardEvent) {
         if (event.code === 'KeyA' || event.code === 'ArrowLeft') {
-            if (this.currentShape && (!this.stateMachine?.checkEOLLeft(this.currentShape) && !this.stateMachine?.checkCollisionLeft(this.currentShape))) {
+            if (this.currentShape) {
                 this.sqr.dX -= this.sqr.dSize;
                 this.currentShape.setSquare(this.sqr);
-                this.clearCanvas()
-                this.renderDebugGrid()
-                this.render()
+
+                if (!this.state?.isValidPosition(this.currentShape)) {
+                    this.sqr.dX += this.sqr.dSize;
+                    this.currentShape?.setSquare(this.sqr)
+                }
             }
 
             if (Tetris._DEBUG) { console.log('Move Left', this.currentShape?.getLeft()) }
@@ -108,12 +106,14 @@ class Tetris {
 
     private moveRight(event: KeyboardEvent) {
         if (event.code === 'KeyD' || event.code === 'ArrowRight') {
-            if (this.currentShape && (!this.stateMachine?.checkEOLRight(this.currentShape) && !this.stateMachine?.checkCollisionRight(this.currentShape))) {
+            if (this.currentShape) {
                 this.sqr.dX += this.sqr.dSize;
                 this.currentShape.setSquare(this.sqr);
-                this.clearCanvas()
-                this.renderDebugGrid()
-                this.render()
+
+                if (!this.state?.isValidPosition(this.currentShape)) {
+                    this.sqr.dX -= this.sqr.dSize;
+                    this.currentShape?.setSquare(this.sqr)
+                }
             }
 
             if (Tetris._DEBUG) { console.log('Move Right') }
@@ -121,77 +121,30 @@ class Tetris {
     }
 
     private moveTop(event: KeyboardEvent) {
-
         if (event.code === 'KeyW' || event.code === 'ArrowUp') {
             if (this.currentShape) {
-                // this.changeRotation();
-                // this.currentShape.rotate(this.rotation);
-                // this.clearCanvas()
-                // // this.renderDebugGrid()
-                // this.render()
+                const currentRotation = Number(this.rotation) as Rotation;
 
-                const lastRotation = Number(this.rotation);
-                const lastSqr = {...this.sqr};
-
-                this.changeRotation(undefined)
-
+                this.changeRotation()
                 this.currentShape.rotate(this.rotation);
                 this.currentShape.setSquare(this.sqr);
 
-                if (this.stateMachine?.checkCollisionLeft(this.currentShape)) {
-                    this.changeRotation(lastRotation)
-                    this.currentShape.rotate(lastRotation);
-                    this.currentShape.setSquare(lastSqr);
+                if (!this.state?.isValidPosition(this.currentShape)) {
+                    this.sqr.dX += this.sqr.dSize
+                    this.currentShape.setSquare(this.sqr);
 
-                    console.log("Collision left")
+                    if (!this.state?.isValidPosition(this.currentShape)) {
+                        this.sqr.dX -= (this.sqr.dSize * 2)
+                        this.currentShape.setSquare(this.sqr);
+
+                        if (!this.state?.isValidPosition(this.currentShape)) {
+                            this.sqr.dX += this.sqr.dSize
+                            this.changeRotation(currentRotation);
+                            this.currentShape.rotate(currentRotation);
+                            this.currentShape.setSquare(this.sqr);
+                        }
+                    }
                 }
-
-                if (this.stateMachine?.checkCollisionRight(this.currentShape)) {
-                    this.changeRotation(lastRotation)
-                    this.currentShape.rotate(lastRotation);
-                    this.currentShape.setSquare(lastSqr);
-
-                    console.log("Collision right")
-                }
-
-                if (this.stateMachine?.checkCollisionBottom(this.currentShape)) {
-                    this.changeRotation(lastRotation)
-                    this.currentShape.rotate(lastRotation);
-                    this.currentShape.setSquare(lastSqr);
-
-                    console.log("Collision bottom")
-                }
-
-                if (this.stateMachine?.checkEOLLeft(this.currentShape)) {
-                    this.changeRotation(lastRotation)
-                    this.currentShape.rotate(lastRotation);
-                    this.currentShape.setSquare(lastSqr);
-
-                    console.log("EOL left")
-                }
-
-                if (this.stateMachine?.checkEOLRight(this.currentShape)) {
-                    this.changeRotation(lastRotation)
-                    this.currentShape.rotate(lastRotation);
-                    this.currentShape.setSquare(lastSqr);
-
-                    console.log("EOL right")
-                }
-
-                if (this.stateMachine?.checkEOLBottom(this.currentShape)) {
-                    this.changeRotation(lastRotation)
-                    this.currentShape.rotate(lastRotation);
-                    this.currentShape.setSquare(lastSqr);
-
-                    console.log("EOL bottom")
-                }
-
-                this.clearCanvas()
-                this.renderDebugGrid()
-                this.render()
-                // console.log(`Last Rotation: ${lastRotation}\n Current Rotation: ${this.rotation}`);
-
-                // if (Tetris._DEBUG) { console.log('Rotation', this.currentShape.rotation) }
             }
         }
     }
@@ -202,14 +155,52 @@ class Tetris {
         }
     }
 
-    private changeRotation(rotation: number | undefined) {
-        if (typeof rotation !== 'undefined'){
+    private getRandomShape(): Shape {
+        if (Tetris._DEBUG)
+            return new JShape(this.ctx, this.sqr);
+
+        const randInt = Math.floor(Math.random() * 7)
+
+        switch (randInt) {
+            default:
+            case 0:
+                return new IShape(this.ctx, this.sqr);
+            case 1:
+                return new JShape(this.ctx, this.sqr);
+            case 2:
+                return new LShape(this.ctx, this.sqr);
+            case 3:
+                return new OShape(this.ctx, this.sqr);
+            case 4:
+                return new SShape(this.ctx, this.sqr);
+            case 5:
+                return new TShape(this.ctx, this.sqr);
+            case 6:
+                return new ZShape(this.ctx, this.sqr);
+        }
+
+    }
+
+    private changeRotation(rotation?: Rotation) {
+        if (rotation != undefined) {
             this.rotation = rotation;
-            return;
+            return null;
         }
 
         if (this.currentShape)
-            this.rotation = (this.currentShape.rotation >= 4 ? 1 : this.currentShape.rotation + 1)
+            this.rotation = (this.currentShape.rotation >= 4 ? 1 : this.currentShape.rotation + 1 as Rotation)
+    }
+
+    private resetDimention() {
+        this.sqr = {
+            dX: 200,
+            dY: 0,
+            dSize: 40,
+            strokeColor: '#ff00ff',
+            fillColor: '#00ff00'
+        }
+
+        this.rotation = 1;
     }
 
     private clearCanvas() {
@@ -235,14 +226,17 @@ class Tetris {
     }
 
     private render() {
-
         this.currentShape?.draw();
 
-        const archivedSquares = this.stateMachine?.getArchivedSquares()
+        const arrivedSquares = this.state?.getArrivedSquares()
 
-        if (archivedSquares) {
-            for (let i = 0; i < archivedSquares.length; i++) {
-                archivedSquares[i].draw();
+        if (arrivedSquares) {
+            for (let i = 0; i < arrivedSquares.length; i++) {
+                for (let j = 0; j < arrivedSquares[i].length; j++) {
+                    if (arrivedSquares[i][j] !== null) {
+                        arrivedSquares[i][j].draw();
+                    }
+                }
             }
         }
     }

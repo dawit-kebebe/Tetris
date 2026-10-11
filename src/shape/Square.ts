@@ -60,7 +60,7 @@ interface ISquare {
 abstract class Shape {
     square: ISquare = null as unknown as ISquare
     ctx: CanvasRenderingContext2D = null as unknown as CanvasRenderingContext2D
-    rotation: number = 0
+    rotation: Rotation = 1
 
     left: number = 0
     right: number = 0
@@ -74,7 +74,7 @@ abstract class Shape {
 
 
     abstract draw(): void
-    abstract rotate(pos: number): void
+    abstract rotate(pos: Rotation): void
     abstract setSquare(square: ISquare): void
 
     /**
@@ -106,6 +106,7 @@ abstract class Shape {
     getTop() { return this.top }
     getLeft() { return this.left }
     getRight() { return this.right }
+    getSquare() { return this.square }
 
     setBottom(bottom: number) {
         this.bottom = bottom
@@ -121,5 +122,6 @@ abstract class Shape {
     }
 }
 
+export type Rotation = 1 | 2 | 3 | 4;
 export type { ISquare };
 export { Square, Shape }
