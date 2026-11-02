@@ -6,3 +6,6 @@ const canv: HTMLCanvasElement = document.getElementById('canv') as HTMLCanvasEle
 const tetris = new Tetris(canv);
 tetris.start();
 tetris.loop();
+tetris.setGameOverSequence(() => {
+    alert("Game Over!!");
+})

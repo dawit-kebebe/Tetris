@@ -10,6 +10,7 @@ import { State } from "./State";
 
 class Tetris {
     static _DEBUG = true;
+
     private canv: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private sqr: ISquare = {
@@ -20,14 +21,17 @@ class Tetris {
         fillColor: '#00ff00'
     }
 
-    rotation: Rotation = 1
+    private rotation: Rotation = 1
 
-    lastTick: number | undefined;
-    animationFrameId: number | undefined;
+    private lastTick: number | undefined;
+    private animationFrameId: number | undefined;
+    
+    private state: State | undefined;
+    private currentShape: Shape | null | undefined;
+    
+    private gameOverSequence?: () => void;
+    
     static DELTA: number = 700;
-
-    state: State | undefined;
-    currentShape: Shape | null | undefined;
 
     constructor(canv: HTMLCanvasElement) {
         this.canv = canv;
@@ -71,10 +75,15 @@ class Tetris {
 
                     this.resetDimention()
                     this.currentShape.setSquare(this.sqr);
+
+                    if (!this.state?.isValidPosition(this.currentShape)) {
+                        this.stop();
+                        return;
+                    }
                 }
-                
+
             }
-            
+
         }
 
         this.clearCanvas()
@@ -86,6 +95,17 @@ class Tetris {
 
     public stop() {
         this.animationFrameId ? cancelAnimationFrame(this.animationFrameId) : undefined;
+
+        document.removeEventListener('keydown', this.moveBottom.bind(this))
+        document.removeEventListener('keydown', this.moveTop.bind(this))
+        document.removeEventListener('keydown', this.moveLeft.bind(this))
+        document.removeEventListener('keydown', this.moveRight.bind(this))
+
+        if (this.gameOverSequence) this.gameOverSequence();
+    }
+
+    public setGameOverSequence(gameOverSequence: () => void) {
+        this.gameOverSequence = gameOverSequence;
     }
 
     private moveLeft(event: KeyboardEvent) {
